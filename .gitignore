@@ -1,41 +1,60 @@
-# Prerequisites
-*.d
+# Visual Studio cache and local config
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docview
 
-# Compiled Object files
+# VS window layout
+DocumentLayout.json
+DocumentLayout.backup.json
+Browse.VC.db
+Browse.VC.db-shm
+Browse.VC.db-wal
+Browse.VC.opendb
+
+# Build output folders
+x64/
+x86/
+Debug/
+Release/
+ipch/
+
+# Compiled files
+*.obj
+*.pch
+*.ipch
+*.tlog
+*.iobj
+*.ipdb
+*.ilk
+*.pdb
+*.exe
+*.dll
+*.lib
+*.exp
+
+# Precompiled headers
+*.gch
+
+# CMake (por si acaso)
+build/
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+
+# Other
+*.d
 *.slo
 *.lo
 *.o
-*.obj
-
-# Precompiled Headers
-*.gch
-*.pch
-
-# Linker files
-*.ilk
-
-# Debugger Files
-*.pdb
-
-# Compiled Dynamic libraries
 *.so
 *.dylib
-*.dll
-
-# Fortran module files
 *.mod
 *.smod
-
-# Compiled Static libraries
 *.lai
 *.la
 *.a
-*.lib
-
-# Executables
-*.exe
 *.out
 *.app
-
-# debug information files
 *.dwo
