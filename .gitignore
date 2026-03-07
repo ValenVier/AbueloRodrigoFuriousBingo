@@ -58,3 +58,74 @@ cmake_install.cmake
 *.out
 *.app
 *.dwo
+
+
+# ── Visual Studio local config ────────────────────────────────────────────────
+RaylibGameAbueloRodrigo/.vs/
+RaylibGameAbueloRodrigo/*.suo
+RaylibGameAbueloRodrigo/*.user
+RaylibGameAbueloRodrigo/*.userosscache
+
+# ── VS window layout ──────────────────────────────────────────────────────────
+RaylibGameAbueloRodrigo/DocumentLayout.json
+RaylibGameAbueloRodrigo/DocumentLayout.backup.json
+RaylibGameAbueloRodrigo/Browse.VC.db
+RaylibGameAbueloRodrigo/Browse.VC.db-shm
+RaylibGameAbueloRodrigo/Browse.VC.db-wal
+RaylibGameAbueloRodrigo/Browse.VC.opendb
+
+# ── Build output ──────────────────────────────────────────────────────────────
+RaylibGameAbueloRodrigo/x64/
+RaylibGameAbueloRodrigo/x86/
+RaylibGameAbueloRodrigo/Debug/
+RaylibGameAbueloRodrigo/Release/
+RaylibGameAbueloRodrigo/ipch/
+
+# ── Compiled files ────────────────────────────────────────────────────────────
+RaylibGameAbueloRodrigo/**/*.obj
+RaylibGameAbueloRodrigo/**/*.pch
+RaylibGameAbueloRodrigo/**/*.ipch
+RaylibGameAbueloRodrigo/**/*.tlog
+RaylibGameAbueloRodrigo/**/*.ilk
+RaylibGameAbueloRodrigo/**/*.pdb
+RaylibGameAbueloRodrigo/**/*.exe
+RaylibGameAbueloRodrigo/**/*.dll
+RaylibGameAbueloRodrigo/**/*.exp
+
+# Visual Studio — never commit these
+**/.vs/
+**/x64/
+**/x86/
+**/Debug/
+**/Release/
+**/ipch/
+**/*.suo
+**/*.user
+**/*.db
+**/*.db-shm
+**/*.db-wal
+**/*.opendb
+**/DocumentLayout*.json
+**/Browse.VC.*
+
+# Compiled files
+**/*.obj
+**/*.pch
+**/*.ipch
+**/*.tlog
+**/*.ilk
+**/*.pdb
+**/*.exe
+**/*.dll
+**/*.exp
+
+# Other
+*.d
+*.o
+*.a
+*.lib
+*.so
+*.dylib
+*.out
+*.app
+*.dwo

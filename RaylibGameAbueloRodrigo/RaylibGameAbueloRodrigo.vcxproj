@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -135,10 +135,14 @@
   <ItemGroup>
     <ClCompile Include="main.cpp" />
     <ClCompile Include="PlayingState.cpp" />
+    <ClCompile Include="BulletPool.cpp" />
+    <ClCompile Include="WeaponStrategy.cpp" />
     <ClCompile Include="StateManager.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="GameState.h" />
+    <ClInclude Include="Bullet.h" />
+    <ClInclude Include="WeaponStrategy.h" />
     <ClInclude Include="PlayingState.h" />
     <ClInclude Include="StateManager.h" />
   </ItemGroup>
