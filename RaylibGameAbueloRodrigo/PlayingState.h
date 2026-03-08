@@ -8,15 +8,17 @@
 #include "SpawnSystem.h"
 #include "CollisionSystem.h" 
 #include <memory>
+#include <vector>
 
 class PlayingState : public GameState {
     public:
         void Enter() override;
-        void Exit() override {}
+        void Exit() override;
         void Update(float dt) override;
         void Draw() const override;
 
     private:
+        float pauseCooldown_ = 0.f;
         // Player position on screen
         Vector2 playerPos_ = { 400.f, 300.f };
 
@@ -33,7 +35,14 @@ class PlayingState : public GameState {
         CollisionSystem collision_;
         float elapsedTime_ = 0.f; //total seconds since game started
 
-        std::unique_ptr<WeaponStrategy> currentWeapon_; //active weapon
+        //std::unique_ptr<WeaponStrategy> currentWeapon_; //active weapon
+        std::vector<std::unique_ptr<WeaponStrategy>> weapons_; // all unlocked weapons
+        int currentWeaponIdx_ = 0; // active weapon index
+
+        // PATTERN: Command (weapon swap actions decoupled form the keys that trigger them)
+        void NextWeapon();
+        void PrevWeapon();
+        WeaponStrategy* CurrentWeapon() const;
 
         void UpdateBullets(float dt); // move bullets and deactivate old ones
         void UpdateEnemies(float dt); // move enemies toward player

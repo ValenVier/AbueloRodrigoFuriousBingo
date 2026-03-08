@@ -137,6 +137,8 @@
     <ClCompile Include="GameManager.cpp" />
     <ClCompile Include="GameOverState.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="MenuState.cpp" />
+    <ClCompile Include="PausedState.cpp" />
     <ClCompile Include="PlayingState.cpp" />
     <ClCompile Include="BulletPool.cpp" />
     <ClCompile Include="EnemyPool.cpp" />
@@ -155,6 +157,8 @@
     <ClInclude Include="Bullet.h" />
     <ClInclude Include="Enemy.h" />
     <ClInclude Include="EnemyFactory.h" />
+    <ClInclude Include="MenuState.h" />
+    <ClInclude Include="PausedState.h" />
     <ClInclude Include="SpawnSystem.h" />
     <ClInclude Include="WeaponStrategy.h" />
     <ClInclude Include="PlayingState.h" />
