@@ -136,12 +136,18 @@
     <ClCompile Include="main.cpp" />
     <ClCompile Include="PlayingState.cpp" />
     <ClCompile Include="BulletPool.cpp" />
+    <ClCompile Include="EnemyPool.cpp" />
+    <ClCompile Include="EnemyFactory.cpp" />
+    <ClCompile Include="SpawnSystem.cpp" />
     <ClCompile Include="WeaponStrategy.cpp" />
     <ClCompile Include="StateManager.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="GameState.h" />
     <ClInclude Include="Bullet.h" />
+    <ClInclude Include="Enemy.h" />
+    <ClInclude Include="EnemyFactory.h" />
+    <ClInclude Include="SpawnSystem.h" />
     <ClInclude Include="WeaponStrategy.h" />
     <ClInclude Include="PlayingState.h" />
     <ClInclude Include="StateManager.h" />
