@@ -4,6 +4,8 @@
 #include "raylib.h"
 #include "Bullet.h"
 #include "WeaponStrategy.h"
+#include "Enemy.h"
+#include "SpawnSystem.h"
 #include <memory>
 
 class PlayingState : public GameState {
@@ -22,9 +24,16 @@ class PlayingState : public GameState {
 
         float speed_ = 180.f;
 
-        BulletPool   bulletPool_; //the shared pool
+        // Systems 
+        BulletPool   bulletPool_;
+        EnemyPool    enemyPool_;
+        SpawnSystem  spawnSystem_;
+        float        elapsedTime_ = 0.f; //total seconds since game started
+
         std::unique_ptr<WeaponStrategy> currentWeapon_; //active weapon
 
         void UpdateBullets(float dt);  // move bullets and deactivate old ones
+        void UpdateEnemies(float dt);   // move enemies toward player
         void DrawBullets()  const; //render all active bullets
+        void DrawEnemies()  const;      // render enemies + health bars
 };

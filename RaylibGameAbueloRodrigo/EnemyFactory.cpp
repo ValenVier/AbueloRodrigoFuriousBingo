@@ -1,0 +1,68 @@
+#include "EnemyFactory.h"
+
+void EnemyFactory::Configure(Enemy& e, EnemyType type, bool isFinalBoss) {
+    e.type = type;
+    e.isFinalBoss = isFinalBoss;
+
+    // Final boss multiplier applied to HP only
+    const float finalMult = isFinalBoss ? 2.5f : 1.0f;
+
+    switch (type) {
+    case EnemyType::NURSE:
+        e.health = e.maxHealth = 50.f * finalMult;
+        e.speed = e.baseSpeed = 85.f;
+        e.damage = 1.f;
+        e.size = 16.f;
+        e.color = WHITE;
+        e.pointValue = 10;
+        e.xpValue = 12;
+        e.attackCooldown = 3.f;
+        break;
+
+    case EnemyType::DOCTOR:
+        e.health = e.maxHealth = 80.f * finalMult;
+        e.speed = e.baseSpeed = 60.f;
+        e.damage = 2.f;
+        e.size = 20.f;
+        e.color = GREEN;
+        e.pointValue = 20;
+        e.xpValue = 18;
+        e.clipboardActive = true;
+        e.clipboardCooldown = 4.f;
+        break;
+
+    case EnemyType::ADMIN:
+        e.health = e.maxHealth = 120.f * finalMult;
+        e.speed = e.baseSpeed = 45.f;
+        e.damage = 1.f;
+        e.size = 22.f;
+        e.color = GRAY;
+        e.pointValue = 35;
+        e.xpValue = 25;
+        e.reinforceTimer = 8.f;
+        break;
+
+    case EnemyType::ORDERLY:
+        e.health = e.maxHealth = 40.f * finalMult;
+        e.speed = e.baseSpeed = 140.f;
+        e.damage = 3.f;
+        e.size = 13.f;
+        e.color = BLUE;
+        e.pointValue = 25;
+        e.xpValue = 20;
+        e.orderlyState = OrderlyState::IDLE;
+        break;
+
+    case EnemyType::CEOBOSS:
+        e.health = e.maxHealth = 2000.f * finalMult;
+        e.speed = e.baseSpeed = 55.f;
+        e.damage = 5.f;
+        e.size = 55.f;
+        e.color = { 139, 0, 0, 255 }; // dark red
+        e.pointValue = 500;
+        e.xpValue = 200;
+        e.bossPhase = 1;
+        e.attackCooldown = 2.f;
+        break;
+    }
+}
