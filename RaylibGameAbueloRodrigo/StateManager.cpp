@@ -1,4 +1,6 @@
 #include "StateManager.h"
+#include <cstdio>
+#include <windows.h>
 
 void StateManager::ChangeState(std::unique_ptr<GameState> state) {
     pendingOp_ = PendingOp::Change;
@@ -29,9 +31,12 @@ void StateManager::Draw() const {
 
 void StateManager::ApplyPending() {
     if (pendingOp_ == PendingOp::None) return;
+    char dbg[128];
 
     switch (pendingOp_) {
     case PendingOp::Change:
+        /*sprintf_s(dbg, "CHANGE — stack before: %zu\n", stack_.size());
+        OutputDebugStringA(dbg);*/
         // Exit and destroy all existing states
         while (!stack_.empty()) {
             stack_.top()->Exit();
@@ -41,24 +46,34 @@ void StateManager::ApplyPending() {
             pendingState_->Enter();
             stack_.push(std::move(pendingState_));
         }
+        /*sprintf_s(dbg, "CHANGE — stack after: %zu\n", stack_.size());
+        OutputDebugStringA(dbg);*/
         break;
 
     case PendingOp::Push:
+        /*sprintf_s(dbg, "PUSH — stack before: %zu\n", stack_.size());
+        OutputDebugStringA(dbg);*/
         // Current state "sleeps" (Exit), new state goes on top
-        if (!stack_.empty()) stack_.top()->Exit();
+        //if (!stack_.empty()) stack_.top()->Exit();
         if (pendingState_) {
             pendingState_->Enter();
             stack_.push(std::move(pendingState_));
         }
+        /*sprintf_s(dbg, "PUSH — stack after: %zu\n", stack_.size());
+        OutputDebugStringA(dbg);*/
         break;
 
     case PendingOp::Pop:
+        /*sprintf_s(dbg, "POP — stack before: %zu\n", stack_.size());
+        OutputDebugStringA(dbg);*/
         if (!stack_.empty()) {
             stack_.top()->Exit();
             stack_.pop();
         }
         // The state below "wakes up" (Enter again)
-        if (!stack_.empty()) stack_.top()->Enter();
+        //if (!stack_.empty()) stack_.top()->Enter();
+        /*sprintf_s(dbg, "POP — stack after: %zu\n", stack_.size());
+        OutputDebugStringA(dbg);*/
         break;
 
     default: break;

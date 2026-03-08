@@ -7,17 +7,30 @@
 #include "GameManager.h"
 #include "GameOverState.h" 
 #include "StateManager.h"
+#include "PausedState.h"
 
 static const int SW = 800;
 static const int SH = 600;
 
 void PlayingState::Enter() {
+
     playerPos_ = { 400.f, 300.f };
     lastMoveDir_ = { 1.f, 0.f };
     elapsedTime_ = 0.f;
 
     // PATTERN: Strategy (create the starting weapon)
-    currentWeapon_ = std::make_unique<CaneLaser>();
+    /*currentWeapon_ = std::make_unique<CaneLaser>();*/
+
+    // Build the starting weapon list
+    weapons_.clear();
+    weapons_.push_back(std::make_unique<CaneLaser>());
+    weapons_.push_back(std::make_unique<FlyingDentures>());
+    weapons_.push_back(std::make_unique<ExplosivePills>());
+    weapons_.push_back(std::make_unique<PureeCatapult>());
+    weapons_.push_back(std::make_unique<BingoSoundWave>());
+    weapons_.push_back(std::make_unique<TurboCharge>());
+    weapons_.push_back(std::make_unique<CandyRain>());
+    currentWeaponIdx_ = 0;
 
     bulletPool_.DeactivateAll();
     enemyPool_.DeactivateAll(); // clear any leftover bullets from a previous run
@@ -28,6 +41,15 @@ void PlayingState::Enter() {
 }
 
 void PlayingState::Update(float dt) {
+    if (pauseCooldown_ > 0.f) pauseCooldown_ -= dt;
+    // ESC (pause state on top) 
+    // PATTERN: State (push/pop means PlayingState is never destroyed on pause)
+    if (IsKeyPressed(KEY_ESCAPE)) {
+        pauseCooldown_ = 0.2f;
+        StateManager::Instance().PushState(std::make_unique<PausedState>());
+        return;
+    }
+
     elapsedTime_ += dt; // track total game time
 
     GameManager::Instance().elapsedTime = elapsedTime_;  //keep GM in sync; to avoid problem with timing
@@ -50,18 +72,25 @@ void PlayingState::Update(float dt) {
     playerPos_.y += dy * speed_ * dt;
 
     float r = 16.f;
-    if (playerPos_.x < r)      playerPos_.x = r;
+    if (playerPos_.x < r) playerPos_.x = r;
     if (playerPos_.x > SW - r) playerPos_.x = SW - r;
-    if (playerPos_.y < r)      playerPos_.y = r;
+    if (playerPos_.y < r) playerPos_.y = r;
     if (playerPos_.y > SH - r) playerPos_.y = SH - r;
+
+    // PATTERN: Command (key bindings decoupled from the swap logic)
+    if (IsKeyPressed(KEY_E)) NextWeapon();
+    if (IsKeyPressed(KEY_Q)) PrevWeapon();
 
     // Auto fire
     // PATTERN: Strategy (we call Update() on the weapon, not Fire() directly)
     // The weapon internally decides when enough time has passed to fire.
     Vector2 mousePos = GetMousePosition();
-    currentWeapon_->Update(dt, playerPos_, lastMoveDir_, mousePos, bulletPool_,
+    /*currentWeapon_->Update(dt, playerPos_, lastMoveDir_, mousePos, bulletPool_,
         1.0f, // dmgMult
-        1.0f); // frMult
+        1.0f); // frMult*/
+    if (CurrentWeapon()) {
+        CurrentWeapon()->Update(dt, playerPos_, lastMoveDir_, mousePos, bulletPool_, 1.0f, 1.0f);
+    }
 
     // Move bullets forward
     UpdateBullets(dt);
@@ -73,11 +102,9 @@ void PlayingState::Update(float dt) {
 
     // Collision detection (returns true if player just died)
     // PATTERN: Observer (CollisionSystem fires events, doesn't call systems directly)
-    bool gameOver = collision_.Update(bulletPool_, enemyPool_,
-        playerPos_, playerRadius_, dt);
+    bool gameOver = collision_.Update(bulletPool_, enemyPool_, playerPos_, playerRadius_, dt);
     if (gameOver) {
-        StateManager::Instance().ChangeState(
-            std::make_unique<GameOverState>());
+        StateManager::Instance().ChangeState(std::make_unique<GameOverState>());
         return;
     }
 }
@@ -93,14 +120,46 @@ void PlayingState::UpdateBullets(float dt) {
             continue;
         }
 
-        // Move in a straight line 
+        // SHOCKWAVE (expands radius, deactivates when too large)
+        if (b.bulletType == BulletType::SHOCKWAVE) {
+            b.radius += b.expansionSpeed * dt;
+            if (b.radius > 300.f) { b.active = false; continue; }
+            continue; // shockwave doesn't move
+        }
+
+        // GRAVITY (arc trajectory; used by ExplosivePills)
+        if (b.bulletType == BulletType::GRAVITY) {
+            b.velocity.y += 280.f * dt;
+            // Detonate when hitting the bottom of the screen
+            if (b.position.y >= SH - 10.f) {
+                b.active = false;
+                continue;
+            }
+        }
+
+        // Move bullet; Move in a straight line 
         b.position.x += b.velocity.x * dt;
         b.position.y += b.velocity.y * dt;
 
+        // BOUNCING — reflect off screen edges
+        if (b.bulletType == BulletType::BOUNCING) {
+            if (b.position.x < 0.f || b.position.x > SW) {
+                b.velocity.x *= -1.f;
+                b.bounceCount++;
+            }
+            if (b.position.y < 0.f || b.position.y > SH) {
+                b.velocity.y *= -1.f;
+                b.bounceCount++;
+            }
+            if (b.bounceCount >= 3) { b.active = false; continue; }
+        }
+
         // Deactivate if bullet leaves the screen
-        if (b.position.x < -50.f || b.position.x > SW + 50.f ||
-            b.position.y < -50.f || b.position.y > SH + 50.f) {
-            b.active = false;
+        if (b.bulletType != BulletType::BOUNCING) {
+            if (b.position.x < -50.f || b.position.x > SW + 50.f ||
+                b.position.y < -50.f || b.position.y > SH + 50.f) {
+                b.active = false;
+            }
         }
     }
 }
@@ -217,6 +276,31 @@ void PlayingState::DrawHUD() const {
     DrawText(buf, SW / 2 - 20, 10, 20, WHITE);
 
     // Weapon; bottom left
-    DrawText(currentWeapon_->GetName(), 10, SH - 45, 18, GREEN);
-    DrawText(currentWeapon_->GetDescription(), 10, SH - 25, 14, GRAY);
+    /*DrawText(currentWeapon_->GetName(), 10, SH - 45, 18, GREEN);
+    DrawText(currentWeapon_->GetDescription(), 10, SH - 25, 14, GRAY);*/
+    if (CurrentWeapon()) {
+        DrawText(CurrentWeapon()->GetName(), 10, SH - 45, 18, GREEN);
+        DrawText(CurrentWeapon()->GetDescription(), 10, SH - 25, 14, GRAY);
+    }
+    DrawText("[Q] Prev   [E] Next", 10, SH - 65, 13, DARKGRAY);
+}
+
+void PlayingState::NextWeapon() {
+    if (weapons_.empty()) return;
+    currentWeaponIdx_ = (currentWeaponIdx_ + 1) % (int)weapons_.size();
+}
+
+void PlayingState::PrevWeapon() {
+    if (weapons_.empty()) return;
+    currentWeaponIdx_ = (currentWeaponIdx_ - 1 + (int)weapons_.size())
+        % (int)weapons_.size();
+}
+
+WeaponStrategy* PlayingState::CurrentWeapon() const {
+    if (weapons_.empty()) return nullptr;
+    return weapons_[currentWeaponIdx_].get();
+}
+
+void PlayingState::Exit() {
+    // nothing
 }

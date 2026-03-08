@@ -4,6 +4,7 @@
 #include "raylib.h"
 #include <cstdio>
 #include <cmath>
+#include "MenuState.h"
 
 static const int SW = 800;
 static const int SH = 600;
@@ -24,8 +25,8 @@ void GameOverState::Update(float dt) {
     timer_ += dt;
     // Any key after 1 second restarts — avoids accidental skip
     if (timer_ > 1.f && IsKeyPressed(KEY_ENTER))
-        StateManager::Instance().ChangeState(
-            std::make_unique<GameOverState>()); // placeholder
+        /*StateManager::Instance().ChangeState(std::make_unique<GameOverState>());*/ // placeholder
+        StateManager::Instance().ChangeState(std::make_unique<MenuState>());
 }
 
 void GameOverState::Draw() const {
