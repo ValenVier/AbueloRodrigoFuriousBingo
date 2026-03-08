@@ -4,6 +4,9 @@
 #include <ctime>    // time
 #include <cstdio>
 #include <algorithm>
+#include "GameManager.h"
+#include "GameOverState.h" 
+#include "StateManager.h"
 
 static const int SW = 800;
 static const int SH = 600;
@@ -21,10 +24,13 @@ void PlayingState::Enter() {
     spawnSystem_.Reset();
 
     srand((unsigned int)time(nullptr)); // seed random number for spawn positions
+    GameManager::Instance().Reset();  // fresh HP and score each game
 }
 
 void PlayingState::Update(float dt) {
     elapsedTime_ += dt; // track total game time
+
+    GameManager::Instance().elapsedTime = elapsedTime_;  //keep GM in sync; to avoid problem with timing
 
     // Player movement
     float dx = 0.f, dy = 0.f;
@@ -49,13 +55,13 @@ void PlayingState::Update(float dt) {
     if (playerPos_.y < r)      playerPos_.y = r;
     if (playerPos_.y > SH - r) playerPos_.y = SH - r;
 
-    // Auto-fire
+    // Auto fire
     // PATTERN: Strategy (we call Update() on the weapon, not Fire() directly)
     // The weapon internally decides when enough time has passed to fire.
     Vector2 mousePos = GetMousePosition();
     currentWeapon_->Update(dt, playerPos_, lastMoveDir_, mousePos, bulletPool_,
-        1.0f,   // dmgMult
-        1.0f);  // frMult
+        1.0f, // dmgMult
+        1.0f); // frMult
 
     // Move bullets forward
     UpdateBullets(dt);
@@ -64,6 +70,16 @@ void PlayingState::Update(float dt) {
     spawnSystem_.Update(dt, elapsedTime_, playerPos_, enemyPool_);
     // move existing enemies toward player
     UpdateEnemies(dt);
+
+    // Collision detection (returns true if player just died)
+    // PATTERN: Observer (CollisionSystem fires events, doesn't call systems directly)
+    bool gameOver = collision_.Update(bulletPool_, enemyPool_,
+        playerPos_, playerRadius_, dt);
+    if (gameOver) {
+        StateManager::Instance().ChangeState(
+            std::make_unique<GameOverState>());
+        return;
+    }
 }
 
 void PlayingState::UpdateBullets(float dt) {
@@ -124,7 +140,7 @@ void PlayingState::Draw() const {
     };
     DrawLineEx(playerPos_, stickEnd, 3.f, BROWN);
 
-    // HUD (weapon name bottom left)
+    /*// HUD (weapon name bottom left)
     DrawText(currentWeapon_->GetName(), 10, SH - 45, 18, GREEN);
     DrawText(currentWeapon_->GetDescription(), 10, SH - 25, 14, GRAY);
 
@@ -135,7 +151,9 @@ void PlayingState::Draw() const {
 
     // Elapsed time; top center
     snprintf(buf, 32, "%.0fs", elapsedTime_);
-    DrawText(buf, SW / 2 - 20, 10, 20, WHITE);
+    DrawText(buf, SW / 2 - 20, 10, 20, WHITE);*/
+
+    DrawHUD();  // replaces the inline snprintf calls
 }
 
 void PlayingState::DrawBullets() const {
@@ -172,4 +190,33 @@ void PlayingState::DrawEnemies() const {
             (int)(e.position.y - e.size - 7.f),
             (int)(barWidth * hpFrac), 4, barColor);
     }
+}
+
+void PlayingState::DrawHUD() const {
+    auto& gm = GameManager::Instance();
+
+    // HP bar; top left
+    DrawRectangle(10, 10, 200, 18, DARKGRAY);
+    float hpFrac = gm.health / gm.maxHealth;
+    DrawRectangle(10, 10, (int)(200.f * hpFrac), 18, RED);
+    DrawRectangleLines(10, 10, 200, 18, WHITE);
+
+    char buf[32];
+    snprintf(buf, 32, "HP: %.0f/%.0f", gm.health, gm.maxHealth);
+    DrawText(buf, 14, 12, 14, WHITE);
+
+    // Score; top right
+    snprintf(buf, 32, "Score: %d", gm.score);
+    DrawText(buf, SW - 160, 10, 20, WHITE);
+
+    snprintf(buf, 32, "Kills: %d", gm.enemiesKilled);
+    DrawText(buf, SW - 140, 34, 16, LIGHTGRAY);
+
+    // Elapsed time; top center
+    snprintf(buf, 32, "%.0fs", elapsedTime_);
+    DrawText(buf, SW / 2 - 20, 10, 20, WHITE);
+
+    // Weapon; bottom left
+    DrawText(currentWeapon_->GetName(), 10, SH - 45, 18, GREEN);
+    DrawText(currentWeapon_->GetDescription(), 10, SH - 25, 14, GRAY);
 }

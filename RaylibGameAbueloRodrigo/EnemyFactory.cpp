@@ -10,7 +10,7 @@ void EnemyFactory::Configure(Enemy& e, EnemyType type, bool isFinalBoss) {
     switch (type) {
     case EnemyType::NURSE:
         e.health = e.maxHealth = 50.f * finalMult;
-        e.speed = e.baseSpeed = 85.f;
+        e.speed = e.baseSpeed = 10.f;//85.f;
         e.damage = 1.f;
         e.size = 16.f;
         e.color = WHITE;
@@ -21,7 +21,7 @@ void EnemyFactory::Configure(Enemy& e, EnemyType type, bool isFinalBoss) {
 
     case EnemyType::DOCTOR:
         e.health = e.maxHealth = 80.f * finalMult;
-        e.speed = e.baseSpeed = 60.f;
+        e.speed = e.baseSpeed = 10.f;//60.f;
         e.damage = 2.f;
         e.size = 20.f;
         e.color = GREEN;
@@ -33,7 +33,7 @@ void EnemyFactory::Configure(Enemy& e, EnemyType type, bool isFinalBoss) {
 
     case EnemyType::ADMIN:
         e.health = e.maxHealth = 120.f * finalMult;
-        e.speed = e.baseSpeed = 45.f;
+        e.speed = e.baseSpeed = 10.f;//45.f;
         e.damage = 1.f;
         e.size = 22.f;
         e.color = GRAY;
@@ -44,7 +44,7 @@ void EnemyFactory::Configure(Enemy& e, EnemyType type, bool isFinalBoss) {
 
     case EnemyType::ORDERLY:
         e.health = e.maxHealth = 40.f * finalMult;
-        e.speed = e.baseSpeed = 140.f;
+        e.speed = e.baseSpeed = 10.f;//140.f;
         e.damage = 3.f;
         e.size = 13.f;
         e.color = BLUE;
@@ -55,7 +55,7 @@ void EnemyFactory::Configure(Enemy& e, EnemyType type, bool isFinalBoss) {
 
     case EnemyType::CEOBOSS:
         e.health = e.maxHealth = 2000.f * finalMult;
-        e.speed = e.baseSpeed = 55.f;
+        e.speed = e.baseSpeed = 10.f;//55.f;
         e.damage = 5.f;
         e.size = 55.f;
         e.color = { 139, 0, 0, 255 }; // dark red

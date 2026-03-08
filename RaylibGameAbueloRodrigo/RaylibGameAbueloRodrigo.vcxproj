@@ -133,6 +133,9 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="CollisionSystem.cpp" />
+    <ClCompile Include="GameManager.cpp" />
+    <ClCompile Include="GameOverState.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="PlayingState.cpp" />
     <ClCompile Include="BulletPool.cpp" />
@@ -143,6 +146,11 @@
     <ClCompile Include="StateManager.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="CollisionSystem.h" />
+    <ClInclude Include="Event.h" />
+    <ClInclude Include="GameEvents.h" />
+    <ClInclude Include="GameManager.h" />
+    <ClInclude Include="GameOverState.h" />
     <ClInclude Include="GameState.h" />
     <ClInclude Include="Bullet.h" />
     <ClInclude Include="Enemy.h" />
