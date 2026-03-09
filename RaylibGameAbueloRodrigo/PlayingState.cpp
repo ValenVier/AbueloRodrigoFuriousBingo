@@ -96,7 +96,7 @@ void PlayingState::Update(float dt) {
     UpdateBullets(dt);
 
     // Enemies (spawn new enemies based on time)
-    spawnSystem_.Update(dt, elapsedTime_, playerPos_, enemyPool_);
+    spawnSystem_.Update(dt, elapsedTime_, playerPos_);
     // move existing enemies toward player
     UpdateEnemies(dt);
 

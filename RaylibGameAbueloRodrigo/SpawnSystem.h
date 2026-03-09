@@ -1,5 +1,25 @@
 #pragma once
-// It is decided when and where to spawn enemies based on elapsed game time
+#include "EnemyFactory.h"
+#include "raylib.h"
+
+class SpawnSystem {
+public:
+    // Dependency injection — SpawnSystem uses the factory, doesn't own it
+    explicit SpawnSystem(EnemyFactory& factory) : factory_(factory) {}
+
+    void Reset();
+    void Update(float dt, float elapsedTime, Vector2 playerPos);
+
+private:
+    EnemyFactory& factory_;
+    float spawnTimer_ = 0.f;
+
+    Vector2  RandomEdgePosition(Vector2 playerPos) const;
+    EnemyType PickEnemyType(float elapsedTime) const;
+};
+
+
+/*// It is decided when and where to spawn enemies based on elapsed game time
 #include "Enemy.h"
 #include "raylib.h"
 
@@ -21,4 +41,4 @@ private:
 
     // Picks an enemy type based on how long the game has been running
     EnemyType PickEnemyType(float elapsedTime) const;
-};
+};*/

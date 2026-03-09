@@ -31,7 +31,9 @@ class PlayingState : public GameState {
         // Systems 
         BulletPool bulletPool_;
         EnemyPool enemyPool_;
-        SpawnSystem spawnSystem_;
+        //SpawnSystem spawnSystem_;
+        EnemyFactory enemyFactory_{ enemyPool_ };   // factory gets pool via injection
+        SpawnSystem  spawnSystem_{ enemyFactory_ }; // spawnSystem gets factory via injection
         CollisionSystem collision_;
         float elapsedTime_ = 0.f; //total seconds since game started
 
