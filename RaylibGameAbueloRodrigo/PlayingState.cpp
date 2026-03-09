@@ -8,6 +8,7 @@
 #include "GameOverState.h" 
 #include "StateManager.h"
 #include "PausedState.h"
+#include "LevelUpState.h"
 
 static const int SW = 800;
 static const int SH = 600;
@@ -38,6 +39,10 @@ void PlayingState::Enter() {
 
     srand((unsigned int)time(nullptr)); // seed random number for spawn positions
     GameManager::Instance().Reset();  // fresh HP and score each game
+
+    particlePool_.DeactivateAll();
+    orbPool_.DeactivateAll();
+    xpSystem_.Init(orbPool_, particlePool_);
 }
 
 void PlayingState::Update(float dt) {
@@ -68,8 +73,10 @@ void PlayingState::Update(float dt) {
         lastMoveDir_ = { dx, dy };
     }
 
-    playerPos_.x += dx * speed_ * dt;
-    playerPos_.y += dy * speed_ * dt;
+    /*playerPos_.x += dx * speed_ * dt;
+    playerPos_.y += dy * speed_ * dt;*/
+    playerPos_.x += dx * speed_ * GameManager::Instance().speedMult * dt;
+    playerPos_.y += dy * speed_ * GameManager::Instance().speedMult * dt;
 
     float r = 16.f;
     if (playerPos_.x < r) playerPos_.x = r;
@@ -89,7 +96,9 @@ void PlayingState::Update(float dt) {
         1.0f, // dmgMult
         1.0f); // frMult*/
     if (CurrentWeapon()) {
-        CurrentWeapon()->Update(dt, playerPos_, lastMoveDir_, mousePos, bulletPool_, 1.0f, 1.0f);
+        //CurrentWeapon()->Update(dt, playerPos_, lastMoveDir_, mousePos, bulletPool_, 1.0f, 1.0f);
+        CurrentWeapon()->Update(dt, playerPos_, lastMoveDir_, mousePos, bulletPool_, 
+            GameManager::Instance().dmgMult, GameManager::Instance().frMult);
     }
 
     // Move bullets forward
@@ -100,11 +109,19 @@ void PlayingState::Update(float dt) {
     // move existing enemies toward player
     UpdateEnemies(dt);
 
+    xpSystem_.Update(dt, playerPos_);
+    UpdateParticles(dt);
+
     // Collision detection (returns true if player just died)
     // PATTERN: Observer (CollisionSystem fires events, doesn't call systems directly)
     bool gameOver = collision_.Update(bulletPool_, enemyPool_, playerPos_, playerRadius_, dt);
     if (gameOver) {
         StateManager::Instance().ChangeState(std::make_unique<GameOverState>());
+        return;
+    }
+
+    if (GameManager::Instance().upgradePoints > 0) {
+        StateManager::Instance().PushState(std::make_unique<LevelUpState>());
         return;
     }
 }
@@ -212,6 +229,9 @@ void PlayingState::Draw() const {
     snprintf(buf, 32, "%.0fs", elapsedTime_);
     DrawText(buf, SW / 2 - 20, 10, 20, WHITE);*/
 
+    DrawOrbs();
+    DrawParticles();
+
     DrawHUD();  // replaces the inline snprintf calls
 }
 
@@ -264,6 +284,9 @@ void PlayingState::DrawHUD() const {
     snprintf(buf, 32, "HP: %.0f/%.0f", gm.health, gm.maxHealth);
     DrawText(buf, 14, 12, 14, WHITE);
 
+    // XP bar
+    DrawXPBar();
+
     // Score; top right
     snprintf(buf, 32, "Score: %d", gm.score);
     DrawText(buf, SW - 160, 10, 20, WHITE);
@@ -302,5 +325,50 @@ WeaponStrategy* PlayingState::CurrentWeapon() const {
 }
 
 void PlayingState::Exit() {
-    // nothing
+    xpSystem_.Shutdown();
+}
+
+void PlayingState::UpdateParticles(float dt) {
+    for (auto& p : particlePool_.particles) {
+        if (!p.active) continue;
+        p.lifetime += dt;
+        if (p.lifetime >= p.maxLifetime) { p.active = false; continue; }
+        p.position.x += p.velocity.x * dt;
+        p.position.y += p.velocity.y * dt;
+        p.velocity.x *= 0.92f;  // slow down over time
+        p.velocity.y *= 0.92f;
+    }
+}
+
+void PlayingState::DrawParticles() const {
+    for (const auto& p : particlePool_.particles) {
+        if (!p.active) continue;
+        float alpha = 1.f - (p.lifetime / p.maxLifetime);
+        Color c = p.color;
+        c.a = (unsigned char)(alpha * 255.f);
+        DrawCircleV(p.position, p.radius, c);
+    }
+}
+
+void PlayingState::DrawOrbs() const {
+    for (const auto& o : orbPool_.orbs) {
+        if (!o.active) continue;
+        float pulse = 0.7f + 0.3f * sinf(o.lifetime * 6.f);
+        DrawCircleV(o.position, o.radius * pulse, o.color);
+        DrawCircleLines((int)o.position.x, (int)o.position.y,
+            (int)(o.radius * pulse) + 2, WHITE);
+    }
+}
+
+void PlayingState::DrawXPBar() const {
+    auto& gm = GameManager::Instance();
+    float xpFrac = gm.xpToNextLevel > 0.f ? gm.xp / gm.xpToNextLevel : 0.f;
+
+    DrawRectangle(10, 32, 200, 8, DARKGRAY);
+    DrawRectangle(10, 32, (int)(200.f * xpFrac), 8, SKYBLUE);
+    DrawRectangleLines(10, 32, 200, 8, WHITE);
+
+    char buf[32];
+    snprintf(buf, 32, "LVL %d", gm.level);
+    DrawText(buf, 215, 30, 14, SKYBLUE);
 }

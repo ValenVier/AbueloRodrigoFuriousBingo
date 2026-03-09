@@ -136,8 +136,11 @@
     <ClCompile Include="CollisionSystem.cpp" />
     <ClCompile Include="GameManager.cpp" />
     <ClCompile Include="GameOverState.cpp" />
+    <ClCompile Include="LevelUpState.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="MenuState.cpp" />
+    <ClCompile Include="Orb.cpp" />
+    <ClCompile Include="Particle.cpp" />
     <ClCompile Include="PausedState.cpp" />
     <ClCompile Include="PlayingState.cpp" />
     <ClCompile Include="BulletPool.cpp" />
@@ -146,6 +149,7 @@
     <ClCompile Include="SpawnSystem.cpp" />
     <ClCompile Include="WeaponStrategy.cpp" />
     <ClCompile Include="StateManager.cpp" />
+    <ClCompile Include="XPSystem.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CollisionSystem.h" />
@@ -157,12 +161,17 @@
     <ClInclude Include="Bullet.h" />
     <ClInclude Include="Enemy.h" />
     <ClInclude Include="EnemyFactory.h" />
+    <ClInclude Include="LevelUpState.h" />
     <ClInclude Include="MenuState.h" />
+    <ClInclude Include="Orb.h" />
+    <ClInclude Include="Particle.h" />
     <ClInclude Include="PausedState.h" />
     <ClInclude Include="SpawnSystem.h" />
+    <ClInclude Include="UpgradeCard.h" />
     <ClInclude Include="WeaponStrategy.h" />
     <ClInclude Include="PlayingState.h" />
     <ClInclude Include="StateManager.h" />
+    <ClInclude Include="XPSystem.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
