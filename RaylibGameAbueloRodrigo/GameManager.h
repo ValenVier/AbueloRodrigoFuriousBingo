@@ -1,5 +1,5 @@
 #pragma once
-// PATTERN: Singleton (single source of truth for all global game state)
+// PATTERN: Singleton (single source for all global game state)
 // HP, score, time (everyone reads/writes the same instance)
 
 class GameManager {
@@ -11,6 +11,7 @@ class GameManager {
         }
 
         void Reset();
+        void AddXP(float amount);
 
         // Health
         float health = 100.f;
@@ -23,6 +24,18 @@ class GameManager {
 
         // Time
         float elapsedTime = 0.f;
+
+        // XP and level
+        int  level = 1;
+        float xp = 0.f;
+        float xpToNextLevel = 50.f;
+        int upgradePoints = 0;
+
+        // Multipliers modified by upgrades
+        float dmgMult = 1.0f;
+        float frMult = 1.0f;  // <1 = faster fire rate
+        float speedMult = 1.0f;
+        float orbPickupRadius = 40.f;
 
         bool IsGameOver() const { return health <= 0.f; }
 

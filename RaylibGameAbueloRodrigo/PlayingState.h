@@ -9,6 +9,10 @@
 #include "CollisionSystem.h" 
 #include <memory>
 #include <vector>
+#include "Particle.h"
+#include "Orb.h"
+#include "XPSystem.h"
+
 
 class PlayingState : public GameState {
     public:
@@ -27,6 +31,10 @@ class PlayingState : public GameState {
 
         float speed_ = 180.f;
         float playerRadius_ = 16.f;
+
+        ParticlePool particlePool_;
+        OrbPool orbPool_;
+        XPSystem xpSystem_;
 
         // Systems 
         BulletPool bulletPool_;
@@ -51,4 +59,9 @@ class PlayingState : public GameState {
         void DrawBullets() const; //render all active bullets
         void DrawEnemies() const; // render enemies + health bars
         void DrawHUD() const; // extracted to keep Draw() clean
+
+        void UpdateParticles(float dt);
+        void DrawParticles() const;
+        void DrawOrbs() const;
+        void DrawXPBar() const;
 };
