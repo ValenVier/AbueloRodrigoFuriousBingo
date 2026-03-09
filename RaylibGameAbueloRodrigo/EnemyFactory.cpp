@@ -1,5 +1,13 @@
 #include "EnemyFactory.h"
 
+Enemy* EnemyFactory::Spawn(EnemyType type, Vector2 position, bool isFinalBoss) {
+    Enemy* e = pool_.Spawn();   // ask the injected pool for a free slot
+    if (!e) return nullptr;     // pool exhausted — caller gets nullptr
+    Configure(*e, type, isFinalBoss);
+    e->position = position;
+    return e;
+}
+
 void EnemyFactory::Configure(Enemy& e, EnemyType type, bool isFinalBoss) {
     e.type = type;
     e.isFinalBoss = isFinalBoss;

@@ -1,4 +1,60 @@
 #include "SpawnSystem.h"
+#include <cstdlib>
+#include <cmath>
+#include <algorithm>
+
+static const int SW = 800;
+static const int SH = 600;
+
+void SpawnSystem::Reset() {
+    spawnTimer_ = 0.f;
+}
+
+void SpawnSystem::Update(float dt, float elapsedTime, Vector2 playerPos) {
+    float interval = std::max(0.4f, 3.0f - elapsedTime * 0.008f);
+
+    spawnTimer_ += dt;
+    if (spawnTimer_ < interval) return;
+    spawnTimer_ = 0.f;
+
+    int count = 2 + (int)(elapsedTime / 20.f);
+
+    for (int i = 0; i < count; i++) {
+        // Factory handles pool slot + configuration in one call
+        EnemyType type = PickEnemyType(elapsedTime);
+        factory_.Spawn(type, RandomEdgePosition(playerPos));
+    }
+}
+
+EnemyType SpawnSystem::PickEnemyType(float t) const {
+    EnemyType pool[4];
+    int count = 0;
+    pool[count++] = EnemyType::NURSE;
+    if (t >= 20.f) pool[count++] = EnemyType::ORDERLY;
+    if (t >= 45.f) pool[count++] = EnemyType::DOCTOR;
+    if (t >= 80.f) pool[count++] = EnemyType::ADMIN;
+    return pool[rand() % count];
+}
+
+Vector2 SpawnSystem::RandomEdgePosition(Vector2 playerPos) const {
+    for (int attempt = 0; attempt < 10; attempt++) {
+        Vector2 pos;
+        int edge = rand() % 4;
+        switch (edge) {
+        case 0: pos = { (float)(rand() % SW), -20.f }; break;
+        case 1: pos = { (float)(rand() % SW), (float)SH + 20 }; break;
+        case 2: pos = { -20.f, (float)(rand() % SH) }; break;
+        default: pos = { (float)SW + 20.f, (float)(rand() % SH) }; break;
+        }
+        float dx = pos.x - playerPos.x;
+        float dy = pos.y - playerPos.y;
+        if (dx * dx + dy * dy >= 80.f * 80.f) return pos;
+    }
+    return { -20.f, -20.f };
+}
+
+
+/*#include "SpawnSystem.h"
 #include "EnemyFactory.h"
 #include <cstdlib>  // rand
 #include <cmath>
@@ -68,4 +124,4 @@ Vector2 SpawnSystem::RandomEdgePosition(Vector2 playerPos) const {
     }
 
     return { -20.f, -20.f }; // fallback: top-left corner offscreen
-}
+}*/
