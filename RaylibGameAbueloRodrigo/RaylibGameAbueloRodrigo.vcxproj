@@ -133,6 +133,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="BingoSystem.cpp" />
     <ClCompile Include="CollisionSystem.cpp" />
     <ClCompile Include="GameManager.cpp" />
     <ClCompile Include="GameOverState.cpp" />
@@ -149,9 +150,11 @@
     <ClCompile Include="SpawnSystem.cpp" />
     <ClCompile Include="WeaponStrategy.cpp" />
     <ClCompile Include="StateManager.cpp" />
+    <ClCompile Include="WinState.cpp" />
     <ClCompile Include="XPSystem.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="BingoSystem.h" />
     <ClInclude Include="CollisionSystem.h" />
     <ClInclude Include="Event.h" />
     <ClInclude Include="GameEvents.h" />
@@ -171,6 +174,7 @@
     <ClInclude Include="WeaponStrategy.h" />
     <ClInclude Include="PlayingState.h" />
     <ClInclude Include="StateManager.h" />
+    <ClInclude Include="WinState.h" />
     <ClInclude Include="XPSystem.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
