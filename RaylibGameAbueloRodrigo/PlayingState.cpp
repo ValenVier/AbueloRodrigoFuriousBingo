@@ -9,6 +9,8 @@
 #include "StateManager.h"
 #include "PausedState.h"
 #include "LevelUpState.h"
+#include "WinState.h"
+#include "BingoSystem.h"
 
 static const int SW = 800;
 static const int SH = 600;
@@ -43,6 +45,9 @@ void PlayingState::Enter() {
     particlePool_.DeactivateAll();
     orbPool_.DeactivateAll();
     xpSystem_.Init(orbPool_, particlePool_);
+
+    bossSpawned_ = false;
+    BingoSystem::Instance().Init();
 }
 
 void PlayingState::Update(float dt) {
@@ -124,6 +129,19 @@ void PlayingState::Update(float dt) {
         StateManager::Instance().PushState(std::make_unique<LevelUpState>());
         return;
     }
+
+    // Boss spawn at 180s
+    if (!bossSpawned_ && elapsedTime_ >= 180.f) {
+        bossSpawned_ = true;
+        Enemy* boss = enemyFactory_.Spawn(EnemyType::CEOBOSS, { 400.f, 50.f }, false);
+        if (boss) GameEvents::Instance().OnBossSpawned.Fire({ boss->position });
+    }
+
+    // Win condition
+    if (BingoSystem::Instance().HasBingo()) {
+        StateManager::Instance().ChangeState(std::make_unique<WinState>());
+        return;
+    }
 }
 
 void PlayingState::UpdateBullets(float dt) {
@@ -195,8 +213,77 @@ void PlayingState::UpdateEnemies(float dt) {
             dy /= len;
         }
 
-        e.position.x += dx * e.speed * dt;
-        e.position.y += dy * e.speed * dt;
+        /*e.position.x += dx * e.speed * dt;
+        e.position.y += dy * e.speed * dt;*/
+
+        switch (e.type) {
+
+            case EnemyType::ORDERLY: {
+                // Charges fast, then retreats
+                e.orderlyTimer += dt;
+                if (e.orderlyState == OrderlyState::IDLE && e.orderlyTimer > 2.f) {
+                    e.orderlyState = OrderlyState::CHARGING;
+                    e.orderlyTimer = 0.f;
+                    e.speed = e.baseSpeed * 3.f;
+                }
+                else if (e.orderlyState == OrderlyState::CHARGING && e.orderlyTimer > 0.6f) {
+                    e.orderlyState = OrderlyState::RETREATING;
+                    e.orderlyTimer = 0.f;
+                    e.speed = e.baseSpeed;
+                }
+                else if (e.orderlyState == OrderlyState::RETREATING && e.orderlyTimer > 1.f) {
+                    e.orderlyState = OrderlyState::IDLE;
+                    e.orderlyTimer = 0.f;
+                }
+                if (e.orderlyState == OrderlyState::RETREATING) {
+                    dx = -dx; dy = -dy;  // move away from player
+                }
+                e.position.x += dx * e.speed * dt;
+                e.position.y += dy * e.speed * dt;
+                break;
+            }
+
+            case EnemyType::ADMIN: {
+                // Slow movement, calls reinforcements every 8s
+                e.reinforceTimer -= dt;
+                if (e.reinforceTimer <= 0.f) {
+                    e.reinforceTimer = 8.f;
+                    // Spawn 2 nurses near the admin
+                    for (int i = 0; i < 2; i++) {
+                        float angle = ((float)rand() / RAND_MAX) * 6.2831f;
+                        Vector2 pos = {
+                            e.position.x + cosf(angle) * 40.f,
+                            e.position.y + sinf(angle) * 40.f
+                        };
+                        enemyFactory_.Spawn(EnemyType::NURSE, pos);
+                    }
+                }
+                e.position.x += dx * e.speed * dt;
+                e.position.y += dy * e.speed * dt;
+                break;
+            }
+
+            case EnemyType::CEOBOSS: {
+                // Phase transitions based on HP percentage
+                float hpPct = e.health / e.maxHealth;
+                if (hpPct < 0.33f) e.bossPhase = 3;
+                else if (hpPct < 0.66f) e.bossPhase = 2;
+                else                    e.bossPhase = 1;
+
+                // Speed increases each phase
+                e.speed = e.baseSpeed * (1.f + (e.bossPhase - 1) * 0.4f);
+
+                e.position.x += dx * e.speed * dt;
+                e.position.y += dy * e.speed * dt;
+                break;
+            }
+
+            default:
+                // NURSE and DOCTOR; straight movement toward player
+                e.position.x += dx * e.speed * dt;
+                e.position.y += dy * e.speed * dt;
+                break;
+        }
     }
 }
 
@@ -232,6 +319,8 @@ void PlayingState::Draw() const {
     DrawOrbs();
     DrawParticles();
 
+    DrawBingoCard();
+
     DrawHUD();  // replaces the inline snprintf calls
 }
 
@@ -246,24 +335,59 @@ void PlayingState::DrawEnemies() const {
     for (const auto& e : enemyPool_.enemies) {
         if (!e.active) continue;
 
-        // Enemy body
-        DrawCircleV(e.position, e.size, e.color);
+        //// Enemy body
+        //DrawCircleV(e.position, e.size, e.color);
 
-        // Health bar above the enemy
-        // Bar width = diameter of the enemy circle
+        //// Health bar above the enemy
+        //// Bar width = diameter of the enemy circle
+        //float barWidth = e.size * 2.f;
+        //float hpFrac = e.health / e.maxHealth;
+
+        //// Background bar
+        //DrawRectangle(
+        //    (int)(e.position.x - barWidth / 2.f),
+        //    (int)(e.position.y - e.size - 7.f),
+        //    (int)barWidth, 4, DARKGRAY);
+
+        //// Filled portion (green > yellow > red based on HP)
+        //Color barColor = (hpFrac > 0.6f) ? GREEN
+        //    : (hpFrac > 0.3f) ? YELLOW
+        //    : RED;
+        //DrawRectangle(
+        //    (int)(e.position.x - barWidth / 2.f),
+        //    (int)(e.position.y - e.size - 7.f),
+        //    (int)(barWidth * hpFrac), 4, barColor);
+
+        // Boss gets a special multi-ring draw
+
+        if (e.type == EnemyType::CEOBOSS) {
+            Color phaseCol = e.bossPhase == 1 ? Color{ 139,0,0,255 }
+            : e.bossPhase == 2 ? ORANGE : RED;
+            DrawCircleV(e.position, e.size, phaseCol);
+            DrawCircleLines((int)e.position.x, (int)e.position.y,
+                (int)e.size + 4, WHITE);
+            DrawCircleLines((int)e.position.x, (int)e.position.y,
+                (int)e.size + 8,
+                e.bossPhase >= 2 ? ORANGE : DARKGRAY);
+
+            char buf[16];
+            snprintf(buf, 16, "PHASE %d", e.bossPhase);
+            DrawText(buf,
+                (int)e.position.x - 24,
+                (int)e.position.y - e.size - 22, 14, WHITE);
+        }
+        else {
+            DrawCircleV(e.position, e.size, e.color);
+        }
+
+        // Health bar (all enemies)
         float barWidth = e.size * 2.f;
         float hpFrac = e.health / e.maxHealth;
-
-        // Background bar
         DrawRectangle(
             (int)(e.position.x - barWidth / 2.f),
             (int)(e.position.y - e.size - 7.f),
             (int)barWidth, 4, DARKGRAY);
-
-        // Filled portion (green > yellow > red based on HP)
-        Color barColor = (hpFrac > 0.6f) ? GREEN
-            : (hpFrac > 0.3f) ? YELLOW
-            : RED;
+        Color barColor = hpFrac > 0.6f ? GREEN : hpFrac > 0.3f ? YELLOW : RED;
         DrawRectangle(
             (int)(e.position.x - barWidth / 2.f),
             (int)(e.position.y - e.size - 7.f),
@@ -326,6 +450,7 @@ WeaponStrategy* PlayingState::CurrentWeapon() const {
 
 void PlayingState::Exit() {
     xpSystem_.Shutdown();
+    BingoSystem::Instance().Shutdown();
 }
 
 void PlayingState::UpdateParticles(float dt) {
@@ -371,4 +496,39 @@ void PlayingState::DrawXPBar() const {
     char buf[32];
     snprintf(buf, 32, "LVL %d", gm.level);
     DrawText(buf, 215, 30, 14, SKYBLUE);
+}
+
+void PlayingState::DrawBingoCard() const {
+    const auto& nums = BingoSystem::Instance().Numbers();
+    const auto& marked = BingoSystem::Instance().Marked();
+
+    // Small card in bottom right corner
+    int startX = SW - 145;
+    int startY = SH - 155;
+    int cellW = 26;
+    int cellH = 26;
+
+    // Background
+    DrawRectangle(startX - 4, startY - 18, 135, 160, { 0, 0, 0, 160 });
+    DrawText("BINGO", startX, startY - 16, 14, GOLD);
+
+    char buf[8];
+    for (int i = 0; i < 25; i++) {
+        int col = i % 5;
+        int row = i / 5;
+        int x = startX + col * cellW;
+        int y = startY + row * cellH;
+
+        Color bg = marked[i] ? Color{ 0, 180, 0, 200 } : Color{ 20, 20, 40, 200 };
+        DrawRectangle(x, y, cellW - 2, cellH - 2, bg);
+
+        if (i == 12) {
+            DrawText("*", x + 8, y + 4, 14, GOLD);  // FREE square
+        }
+        else {
+            snprintf(buf, 8, "%d", nums[i]);
+            DrawText(buf, x + 2, y + 5, 11,
+                marked[i] ? WHITE : LIGHTGRAY);
+        }
+    }
 }

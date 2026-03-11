@@ -28,6 +28,15 @@ struct OrbCollectedData {
     float   xpValue;
 };
 
+struct BingoNumberData {
+    int number;
+    bool bingo; // true if this number completed a line
+};
+
+struct BossSpawnedData {
+    Vector2 position;
+};
+
 
 // GameEvents singleton
 class GameEvents {
@@ -42,6 +51,8 @@ class GameEvents {
         Event<PlayerDamagedData> OnPlayerDamaged;
         Event<LevelUpData> OnLevelUp;
         Event<OrbCollectedData> OnOrbCollected;
+        Event<BingoNumberData> OnBingoNumber;
+        Event<BossSpawnedData> OnBossSpawned;
 
     private:
         GameEvents() = default;
