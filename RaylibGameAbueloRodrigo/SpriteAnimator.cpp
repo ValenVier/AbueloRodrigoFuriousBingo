@@ -25,7 +25,8 @@ void SpriteAnimator::Update(float dt) {
     }*/
 }
 
-void SpriteAnimator::Draw(Vector2 worldPos, float displaySize, Color tint, bool flipX) const {
+void SpriteAnimator::Draw(Vector2 worldPos, float displaySize,
+    Color tint, bool flipX, bool flipY) const {
     if (texture_.id == 0) return;
 
     // Source rectangl,select current frame from sheet
@@ -33,7 +34,7 @@ void SpriteAnimator::Draw(Vector2 worldPos, float displaySize, Color tint, bool 
         (float)(currentFrame_ * frameW_) + frameOffsetX_,  // offset
         (float)(currentRow_ * frameH_),
         (float)(flipX ? -frameW_ : frameW_),
-        (float)frameH_
+        (float)(flipY ? -frameH_ : frameH_)
     };
 
     // Destination rectangle,centered on worldPos, scaled

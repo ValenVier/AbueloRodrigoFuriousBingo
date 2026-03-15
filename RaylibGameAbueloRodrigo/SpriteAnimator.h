@@ -14,7 +14,9 @@ class SpriteAnimator {
         void Update(float dt);
 
         // Draw centered on worldPos, scaled to displaySize, tinted with color
-        void Draw(Vector2 worldPos, float displaySize, Color tint, bool flipX = false) const;
+        //void Draw(Vector2 worldPos, float displaySize, Color tint, bool flipX = false) const;
+        void Draw(Vector2 worldPos, float displaySize, 
+            Color tint, bool flipX = false, bool flipY = false) const;
 
         // Change which row of the sheet to use (for directional sprites)
         void SetRow(int row) { currentRow_ = row; }

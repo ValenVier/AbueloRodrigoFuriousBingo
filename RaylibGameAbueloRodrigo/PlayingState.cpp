@@ -11,6 +11,7 @@
 #include "LevelUpState.h"
 #include "WinState.h"
 #include "BingoSystem.h"
+#include "TextureManager.h"
 
 static const int SW = 800;
 static const int SH = 600;
@@ -88,6 +89,18 @@ void PlayingState::Enter() {
     orbPool_.DeactivateAll();
     xpSystem_.Init(orbPool_, particlePool_);
 
+    Texture2D wheelchairTex = TextureManager::Instance().Load("assets/sprites/Wheelchair__Blue.png");
+    playerSprite_.Init(wheelchairTex, 64, 64, 1, 1.f);
+    playerSprite_.SetRow(2);  // row 2 = front view as default
+
+    Texture2D bodyTex = TextureManager::Instance().Load("assets/sprites/Sitting.png");
+    playerBody_.Init(bodyTex, 64, 64, 1, 1.f);
+    playerBody_.SetRow(2);  // front view default
+
+    Texture2D headTex = TextureManager::Instance().Load("assets/sprites/Sitting__head.png");
+    playerHead_.Init(headTex, 64, 64, 1, 1.f);
+    playerHead_.SetRow(0);  // top view default
+
     bossSpawned_ = false;
     BingoSystem::Instance().Init();
 }
@@ -141,6 +154,23 @@ void PlayingState::Update(float dt) {
     if (playerPos_.x > SW - r) playerPos_.x = SW - r;
     if (playerPos_.y < r) playerPos_.y = r;
     if (playerPos_.y > SH - r) playerPos_.y = SH - r;
+
+    // Update sprite direction based on last move direction
+    if (fabsf(lastMoveDir_.x) >= fabsf(lastMoveDir_.y)) {
+        playerSprite_.SetRow(3);
+        playerBody_.SetRow(3);
+        playerHead_.SetRow(1);   // side view
+    }
+    else if (lastMoveDir_.y < 0.f) {
+        playerSprite_.SetRow(0);
+        playerBody_.SetRow(0);
+        playerHead_.SetRow(0);   // back/top view
+    }
+    else {
+        playerSprite_.SetRow(2);
+        playerBody_.SetRow(2);
+        playerHead_.SetRow(2);   // front view
+    }
 
     // PATTERN: Command (key bindings decoupled from the swap logic)
     if (IsKeyPressed(KEY_E)) NextWeapon();
@@ -370,14 +400,23 @@ void PlayingState::Draw() const {
     DrawBullets(); // draw bullets behind the player
 
     // Draw Rodrigo
-    DrawCircleV(playerPos_, 16.f, YELLOW);
+    /*DrawCircleV(playerPos_, 16.f, YELLOW);
     DrawRectangle((int)playerPos_.x - 20, (int)playerPos_.y + 8, 8, 6, DARKGRAY);
-    DrawRectangle((int)playerPos_.x + 12, (int)playerPos_.y + 8, 8, 6, DARKGRAY);
-    Vector2 stickEnd = {
-        playerPos_.x + lastMoveDir_.x * 24.f,
-        playerPos_.y + lastMoveDir_.y * 24.f
-    };
-    DrawLineEx(playerPos_, stickEnd, 3.f, BROWN);
+    DrawRectangle((int)playerPos_.x + 12, (int)playerPos_.y + 8, 8, 6, DARKGRAY);*/
+    
+    // Flip horizontally when moving left
+    bool flipX = (lastMoveDir_.x < 0.f);
+
+    // Wheelchair
+    playerSprite_.Draw(playerPos_, 30.f, WHITE, flipX);
+
+    // Body
+    Vector2 bodyPos = { playerPos_.x, playerPos_.y - 8.f };
+    playerBody_.Draw(bodyPos, 28.f, WHITE, flipX);
+
+    // Head — above the body
+    Vector2 headPos = { playerPos_.x, playerPos_.y - 5.f };
+    playerHead_.Draw(headPos, 14.f, WHITE, flipX);
 
     /*// HUD (weapon name bottom left)
     DrawText(currentWeapon_->GetName(), 10, SH - 45, 18, GREEN);
