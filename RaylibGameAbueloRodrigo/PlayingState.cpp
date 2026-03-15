@@ -339,7 +339,7 @@ void PlayingState::UpdateEnemies(float dt) {
                 float hpPct = e.health / e.maxHealth;
                 if (hpPct < 0.33f) e.bossPhase = 3;
                 else if (hpPct < 0.66f) e.bossPhase = 2;
-                else                    e.bossPhase = 1;
+                else e.bossPhase = 1;
 
                 // Speed increases each phase
                 e.speed = e.baseSpeed * (1.f + (e.bossPhase - 1) * 0.4f);
@@ -354,6 +354,11 @@ void PlayingState::UpdateEnemies(float dt) {
                 e.position.x += dx * e.speed * dt;
                 e.position.y += dy * e.speed * dt;
                 break;
+        }
+
+        for (auto& e : enemyPool_.enemies) {
+            if (!e.active) continue;
+            e.animator.Update(dt);
         }
     }
 }
@@ -431,7 +436,7 @@ void PlayingState::DrawEnemies() const {
 
         // Boss gets a special multi-ring draw
 
-        if (e.type == EnemyType::CEOBOSS) {
+        /*if (e.type == EnemyType::CEOBOSS) {
             Color phaseCol = e.bossPhase == 1 ? Color{ 139,0,0,255 }
             : e.bossPhase == 2 ? ORANGE : RED;
             DrawCircleV(e.position, e.size, phaseCol);
@@ -462,6 +467,39 @@ void PlayingState::DrawEnemies() const {
         DrawRectangle(
             (int)(e.position.x - barWidth / 2.f),
             (int)(e.position.y - e.size - 7.f),
+            (int)(barWidth * hpFrac), 4, barColor);*/
+
+
+            // Draw sprite instead of circle
+            // flipX = true if moving left (dx < 0)
+        bool flipX = (e.position.x > playerPos_.x);
+        e.animator.Draw(e.position, e.size, WHITE, flipX);
+
+        // Boss extra rings
+        if (e.type == EnemyType::CEOBOSS) {
+            Color ringCol = e.bossPhase == 1 ? RED
+                : e.bossPhase == 2 ? ORANGE : YELLOW;
+            DrawCircleLines((int)e.position.x, (int)e.position.y,
+                (int)e.size + 6, ringCol);
+
+            char buf[16];
+            snprintf(buf, 16, "PHASE %d", e.bossPhase);
+            DrawText(buf, (int)e.position.x - 24,
+                (int)e.position.y - (int)e.size - 22, 14, WHITE);
+        }
+
+        // Health bar — unchanged
+        float barWidth = e.size * 2.f;
+        float hpFrac = e.health / e.maxHealth;
+        DrawRectangle(
+            (int)(e.position.x - barWidth / 2.f),
+            (int)(e.position.y - e.size - 10.f),
+            (int)barWidth, 4, DARKGRAY);
+        Color barColor = hpFrac > 0.6f ? GREEN
+            : hpFrac > 0.3f ? YELLOW : RED;
+        DrawRectangle(
+            (int)(e.position.x - barWidth / 2.f),
+            (int)(e.position.y - e.size - 10.f),
             (int)(barWidth * hpFrac), 4, barColor);
     }
 }

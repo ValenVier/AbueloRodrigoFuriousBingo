@@ -149,6 +149,8 @@
     <ClCompile Include="EnemyFactory.cpp" />
     <ClCompile Include="ConfiscationState.cpp" />
     <ClCompile Include="SpawnSystem.cpp" />
+    <ClCompile Include="SpriteAnimator.cpp" />
+    <ClCompile Include="TextureManager.cpp" />
     <ClCompile Include="WeaponStrategy.cpp" />
     <ClCompile Include="StateManager.cpp" />
     <ClCompile Include="WeaponUnlockState.cpp" />
@@ -167,6 +169,8 @@
     <ClInclude Include="Bullet.h" />
     <ClInclude Include="Enemy.h" />
     <ClInclude Include="EnemyFactory.h" />
+    <ClInclude Include="SpriteAnimator.h" />
+    <ClInclude Include="TextureManager.h" />
     <ClInclude Include="WeaponUnlockState.h" />
     <ClInclude Include="LevelUpState.h" />
     <ClInclude Include="MenuState.h" />
