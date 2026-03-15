@@ -2,6 +2,7 @@
 #include "StateManager.h"
 #include "PlayingState.h"
 #include "MenuState.h"
+#include "TextureManager.h"
 
 int main() {
     // Initialize the Raylib window
@@ -30,6 +31,7 @@ int main() {
         EndDrawing();
     }
 
+    TextureManager::Instance().Shutdown(); // Before CloseWindow()
     CloseWindow();
     return 0;
 }

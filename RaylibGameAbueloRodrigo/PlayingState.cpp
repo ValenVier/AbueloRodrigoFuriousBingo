@@ -11,6 +11,7 @@
 #include "LevelUpState.h"
 #include "WinState.h"
 #include "BingoSystem.h"
+#include "TextureManager.h"
 
 static const int SW = 800;
 static const int SH = 600;
@@ -26,14 +27,56 @@ void PlayingState::Enter() {
 
     // Build the starting weapon list
     weapons_.clear();
-    weapons_.push_back(std::make_unique<CaneLaser>());
+    /*weapons_.push_back(std::make_unique<CaneLaser>());
     weapons_.push_back(std::make_unique<FlyingDentures>());
     weapons_.push_back(std::make_unique<ExplosivePills>());
     weapons_.push_back(std::make_unique<PureeCatapult>());
     weapons_.push_back(std::make_unique<BingoSoundWave>());
     weapons_.push_back(std::make_unique<TurboCharge>());
     weapons_.push_back(std::make_unique<CandyRain>());
+    currentWeaponIdx_ = 0;*/
+
+    SyncWeaponsWithGameManager();
     currentWeaponIdx_ = 0;
+
+    // Connect bingo line callback
+    BingoSystem::Instance().OnLineCompleted = [this]() {
+        // Find two options to offer: one from locked pool, one from confiscated
+        auto& gm = GameManager::Instance();
+        int option1 = -1, option2 = -1;
+
+        // First option: next locked weapon
+        for (int i = 0; i < 7; i++) {
+            bool unlocked = false;
+            for (int u : gm.unlockedWeaponSlots)
+                if (u == i) { unlocked = true; break; }
+            bool confiscated = false;
+            for (int c : gm.confiscatedSlots)
+                if (c == i) { confiscated = true; break; }
+            if (!unlocked && !confiscated) { option1 = i; break; }
+        }
+
+        // Second option: confiscated weapon if any, else next locked
+        if (!gm.confiscatedSlots.empty()) {
+            option2 = gm.confiscatedSlots[0];
+        }
+        else {
+            for (int i = 0; i < 7; i++) {
+                bool unlocked = false;
+                for (int u : gm.unlockedWeaponSlots)
+                    if (u == i) { unlocked = true; break; }
+                if (!unlocked && i != option1) { option2 = i; break; }
+            }
+        }
+
+        // Only show if there's something to unlock
+        if (option1 >= 0 || option2 >= 0) {
+            if (option1 < 0) option1 = option2;
+            if (option2 < 0) option2 = option1;
+            StateManager::Instance().PushState(
+                std::make_unique<WeaponUnlockState>(option1, option2));
+        }
+        };
 
     bulletPool_.DeactivateAll();
     enemyPool_.DeactivateAll(); // clear any leftover bullets from a previous run
@@ -46,14 +89,37 @@ void PlayingState::Enter() {
     orbPool_.DeactivateAll();
     xpSystem_.Init(orbPool_, particlePool_);
 
+    Texture2D wheelchairTex = TextureManager::Instance().Load("assets/sprites/Wheelchair__Blue.png");
+    playerSprite_.Init(wheelchairTex, 64, 64, 1, 1.f);
+    playerSprite_.SetRow(2);  // row 2 = front view as default
+
+    Texture2D bodyTex = TextureManager::Instance().Load("assets/sprites/Sitting.png");
+    playerBody_.Init(bodyTex, 64, 64, 1, 1.f);
+    playerBody_.SetRow(2);  // front view default
+
+    Texture2D headTex = TextureManager::Instance().Load("assets/sprites/Sitting__head.png");
+    playerHead_.Init(headTex, 64, 64, 1, 1.f);
+    playerHead_.SetRow(0);  // top view default
+
     bossSpawned_ = false;
     BingoSystem::Instance().Init();
 }
 
 void PlayingState::Update(float dt) {
+    if (IsKeyPressed(KEY_F11))
+        ToggleFullscreen();
+
     if (pauseCooldown_ > 0.f) pauseCooldown_ -= dt;
     // ESC (pause state on top) 
     // PATTERN: State (push/pop means PlayingState is never destroyed on pause)
+    
+    static int lastUnlockedCount = 0;
+    int currentUnlocked = (int)GameManager::Instance().unlockedWeaponSlots.size();
+    if (currentUnlocked != lastUnlockedCount) {
+        lastUnlockedCount = currentUnlocked;
+        SyncWeaponsWithGameManager();
+    }
+
     if (IsKeyPressed(KEY_ESCAPE)) {
         pauseCooldown_ = 0.2f;
         StateManager::Instance().PushState(std::make_unique<PausedState>());
@@ -88,6 +154,23 @@ void PlayingState::Update(float dt) {
     if (playerPos_.x > SW - r) playerPos_.x = SW - r;
     if (playerPos_.y < r) playerPos_.y = r;
     if (playerPos_.y > SH - r) playerPos_.y = SH - r;
+
+    // Update sprite direction based on last move direction
+    if (fabsf(lastMoveDir_.x) >= fabsf(lastMoveDir_.y)) {
+        playerSprite_.SetRow(3);
+        playerBody_.SetRow(3);
+        playerHead_.SetRow(1);   // side view
+    }
+    else if (lastMoveDir_.y < 0.f) {
+        playerSprite_.SetRow(0);
+        playerBody_.SetRow(0);
+        playerHead_.SetRow(0);   // back/top view
+    }
+    else {
+        playerSprite_.SetRow(2);
+        playerBody_.SetRow(2);
+        playerHead_.SetRow(2);   // front view
+    }
 
     // PATTERN: Command (key bindings decoupled from the swap logic)
     if (IsKeyPressed(KEY_E)) NextWeapon();
@@ -130,9 +213,27 @@ void PlayingState::Update(float dt) {
         return;
     }
 
+    CheckWeaponConfiscation();
+
     // Boss spawn at 180s
     if (!bossSpawned_ && elapsedTime_ >= 180.f) {
         bossSpawned_ = true;
+
+        // Free a slot if pool is full — boss always spawns
+        bool hasSlot = false;
+        for (const auto& e : enemyPool_.enemies)
+            if (!e.active) { hasSlot = true; break; }
+
+        if (!hasSlot) {
+            // Deactivate the first non boss enemy to make room
+            for (auto& e : enemyPool_.enemies) {
+                if (e.active && e.type != EnemyType::CEOBOSS) {
+                    e.active = false;
+                    break;
+                }
+            }
+        }
+        
         Enemy* boss = enemyFactory_.Spawn(EnemyType::CEOBOSS, { 400.f, 50.f }, false);
         if (boss) GameEvents::Instance().OnBossSpawned.Fire({ boss->position });
     }
@@ -268,7 +369,7 @@ void PlayingState::UpdateEnemies(float dt) {
                 float hpPct = e.health / e.maxHealth;
                 if (hpPct < 0.33f) e.bossPhase = 3;
                 else if (hpPct < 0.66f) e.bossPhase = 2;
-                else                    e.bossPhase = 1;
+                else e.bossPhase = 1;
 
                 // Speed increases each phase
                 e.speed = e.baseSpeed * (1.f + (e.bossPhase - 1) * 0.4f);
@@ -284,6 +385,11 @@ void PlayingState::UpdateEnemies(float dt) {
                 e.position.y += dy * e.speed * dt;
                 break;
         }
+
+        for (auto& e : enemyPool_.enemies) {
+            if (!e.active) continue;
+            e.animator.Update(dt);
+        }
     }
 }
 
@@ -294,14 +400,23 @@ void PlayingState::Draw() const {
     DrawBullets(); // draw bullets behind the player
 
     // Draw Rodrigo
-    DrawCircleV(playerPos_, 16.f, YELLOW);
+    /*DrawCircleV(playerPos_, 16.f, YELLOW);
     DrawRectangle((int)playerPos_.x - 20, (int)playerPos_.y + 8, 8, 6, DARKGRAY);
-    DrawRectangle((int)playerPos_.x + 12, (int)playerPos_.y + 8, 8, 6, DARKGRAY);
-    Vector2 stickEnd = {
-        playerPos_.x + lastMoveDir_.x * 24.f,
-        playerPos_.y + lastMoveDir_.y * 24.f
-    };
-    DrawLineEx(playerPos_, stickEnd, 3.f, BROWN);
+    DrawRectangle((int)playerPos_.x + 12, (int)playerPos_.y + 8, 8, 6, DARKGRAY);*/
+    
+    // Flip horizontally when moving left
+    bool flipX = (lastMoveDir_.x < 0.f);
+
+    // Wheelchair
+    playerSprite_.Draw(playerPos_, 30.f, WHITE, flipX);
+
+    // Body
+    Vector2 bodyPos = { playerPos_.x, playerPos_.y - 8.f };
+    playerBody_.Draw(bodyPos, 28.f, WHITE, flipX);
+
+    // Head — above the body
+    Vector2 headPos = { playerPos_.x, playerPos_.y - 5.f };
+    playerHead_.Draw(headPos, 14.f, WHITE, flipX);
 
     /*// HUD (weapon name bottom left)
     DrawText(currentWeapon_->GetName(), 10, SH - 45, 18, GREEN);
@@ -360,7 +475,7 @@ void PlayingState::DrawEnemies() const {
 
         // Boss gets a special multi-ring draw
 
-        if (e.type == EnemyType::CEOBOSS) {
+        /*if (e.type == EnemyType::CEOBOSS) {
             Color phaseCol = e.bossPhase == 1 ? Color{ 139,0,0,255 }
             : e.bossPhase == 2 ? ORANGE : RED;
             DrawCircleV(e.position, e.size, phaseCol);
@@ -391,6 +506,39 @@ void PlayingState::DrawEnemies() const {
         DrawRectangle(
             (int)(e.position.x - barWidth / 2.f),
             (int)(e.position.y - e.size - 7.f),
+            (int)(barWidth * hpFrac), 4, barColor);*/
+
+
+            // Draw sprite instead of circle
+            // flipX = true if moving left (dx < 0)
+        bool flipX = (e.position.x > playerPos_.x);
+        e.animator.Draw(e.position, e.size, WHITE, flipX);
+
+        // Boss extra rings
+        if (e.type == EnemyType::CEOBOSS) {
+            Color ringCol = e.bossPhase == 1 ? RED
+                : e.bossPhase == 2 ? ORANGE : YELLOW;
+            DrawCircleLines((int)e.position.x, (int)e.position.y,
+                (int)e.size + 6, ringCol);
+
+            char buf[16];
+            snprintf(buf, 16, "PHASE %d", e.bossPhase);
+            DrawText(buf, (int)e.position.x - 24,
+                (int)e.position.y - (int)e.size - 22, 14, WHITE);
+        }
+
+        // Health bar — unchanged
+        float barWidth = e.size * 2.f;
+        float hpFrac = e.health / e.maxHealth;
+        DrawRectangle(
+            (int)(e.position.x - barWidth / 2.f),
+            (int)(e.position.y - e.size - 10.f),
+            (int)barWidth, 4, DARKGRAY);
+        Color barColor = hpFrac > 0.6f ? GREEN
+            : hpFrac > 0.3f ? YELLOW : RED;
+        DrawRectangle(
+            (int)(e.position.x - barWidth / 2.f),
+            (int)(e.position.y - e.size - 10.f),
             (int)(barWidth * hpFrac), 4, barColor);
     }
 }
@@ -530,5 +678,53 @@ void PlayingState::DrawBingoCard() const {
             DrawText(buf, x + 2, y + 5, 11,
                 marked[i] ? WHITE : LIGHTGRAY);
         }
+    }
+}
+
+void PlayingState::SyncWeaponsWithGameManager() {
+    auto& gm = GameManager::Instance();
+    weapons_.clear();
+
+    // Rebuild weapon list from unlocked slots in order
+    // Full weapon list order must match slot indices 0-6
+    for (int slot : gm.unlockedWeaponSlots) {
+        switch (slot) {
+        case 0: weapons_.push_back(std::make_unique<CaneLaser>()); break;
+        case 1: weapons_.push_back(std::make_unique<CandyRain>()); break;
+        case 2: weapons_.push_back(std::make_unique<FlyingDentures>()); break;
+        case 3: weapons_.push_back(std::make_unique<ExplosivePills>()); break;
+        case 4: weapons_.push_back(std::make_unique<PureeCatapult>()); break;
+        case 5: weapons_.push_back(std::make_unique<BingoSoundWave>()); break;
+        case 6: weapons_.push_back(std::make_unique<TurboCharge>()); break;
+        }
+    }
+
+    if (currentWeaponIdx_ >= (int)weapons_.size())
+        currentWeaponIdx_ = 0;
+}
+
+void PlayingState::CheckWeaponConfiscation() {
+    auto& gm = GameManager::Instance();
+
+    // Only confiscate if player has more than 1 weapon
+    if (weapons_.size() <= 1) return;
+
+    if (gm.CheckConfiscation()) {
+        // Get name of current weapon before confiscating
+        const char* taken = CurrentWeapon() ? CurrentWeapon()->GetName() : "Unknown";
+        int takenIdx = gm.unlockedWeaponSlots[currentWeaponIdx_];
+
+        // Remove from unlocked, add to confiscated
+        gm.unlockedWeaponSlots.erase(gm.unlockedWeaponSlots.begin() + currentWeaponIdx_);
+        gm.confiscatedSlots.push_back(takenIdx);
+
+        // Rebuild weapon list and clamp index
+        SyncWeaponsWithGameManager();
+
+        // Get name of new active weapon
+        const char* replacement = CurrentWeapon() ? CurrentWeapon()->GetName() : "None";
+
+        // Show confiscation card as overlay
+        StateManager::Instance().PushState(std::make_unique<ConfiscationState>(taken, replacement));
     }
 }

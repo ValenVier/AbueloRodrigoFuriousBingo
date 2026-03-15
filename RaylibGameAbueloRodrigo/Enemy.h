@@ -3,6 +3,7 @@
 // EnemyPool owns a fixed array; no heap allocation during gameplay.
 #include "raylib.h"
 #include <array>
+#include "SpriteAnimator.h"
 
 enum class EnemyType {
     NURSE, // Nurse; fast, low HP
@@ -28,6 +29,8 @@ struct Enemy {
     bool active = false;
     Color color = WHITE;
     EnemyType type = EnemyType::NURSE;
+    Vector2 retreatDir = { 0.f, 0.f };
+    SpriteAnimator animator;
 
     // Slow debuff timer — set by SLOWING bullets in stage 5
     float slowTimer = 0.f;

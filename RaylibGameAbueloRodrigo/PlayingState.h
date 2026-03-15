@@ -13,6 +13,9 @@
 #include "Orb.h"
 #include "XPSystem.h"
 #include "BingoSystem.h"
+#include "ConfiscationState.h"
+#include "WeaponUnlockState.h"
+#include "SpriteAnimator.h"
 
 
 class PlayingState : public GameState {
@@ -33,7 +36,10 @@ class PlayingState : public GameState {
         float speed_ = 180.f;
         float playerRadius_ = 16.f;
 
-        bool bossSpawned_ = false;   // true once the CEO boss has been spawned
+        bool bossSpawned_ = false;
+        SpriteAnimator playerSprite_;   // wheelchair
+        SpriteAnimator playerBody_;     // body on top
+        SpriteAnimator playerHead_;     // head
 
         ParticlePool particlePool_;
         OrbPool orbPool_;
@@ -68,4 +74,10 @@ class PlayingState : public GameState {
         void DrawOrbs() const;
         void DrawXPBar() const;
         void DrawBingoCard() const;
+
+        int  lastHpConfiscationCheck_ = 0; // tracks which thresholds already checked
+        void CheckWeaponConfiscation(); // called every frame in Update()
+        void SyncWeaponsWithGameManager(); // rebuilds weapons_ list from GM
+        int  GetTwoUnlockOptions() const; // returns index of next weapon to offer
+
 };
