@@ -13,6 +13,8 @@
 #include "Orb.h"
 #include "XPSystem.h"
 #include "BingoSystem.h"
+#include "ConfiscationState.h"
+#include "WeaponUnlockState.h"
 
 
 class PlayingState : public GameState {
@@ -68,4 +70,10 @@ class PlayingState : public GameState {
         void DrawOrbs() const;
         void DrawXPBar() const;
         void DrawBingoCard() const;
+
+        int  lastHpConfiscationCheck_ = 0; // tracks which thresholds already checked
+        void CheckWeaponConfiscation(); // called every frame in Update()
+        void SyncWeaponsWithGameManager(); // rebuilds weapons_ list from GM
+        int  GetTwoUnlockOptions() const; // returns index of next weapon to offer
+
 };

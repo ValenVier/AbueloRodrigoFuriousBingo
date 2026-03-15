@@ -26,14 +26,56 @@ void PlayingState::Enter() {
 
     // Build the starting weapon list
     weapons_.clear();
-    weapons_.push_back(std::make_unique<CaneLaser>());
+    /*weapons_.push_back(std::make_unique<CaneLaser>());
     weapons_.push_back(std::make_unique<FlyingDentures>());
     weapons_.push_back(std::make_unique<ExplosivePills>());
     weapons_.push_back(std::make_unique<PureeCatapult>());
     weapons_.push_back(std::make_unique<BingoSoundWave>());
     weapons_.push_back(std::make_unique<TurboCharge>());
     weapons_.push_back(std::make_unique<CandyRain>());
+    currentWeaponIdx_ = 0;*/
+
+    SyncWeaponsWithGameManager();
     currentWeaponIdx_ = 0;
+
+    // Connect bingo line callback
+    BingoSystem::Instance().OnLineCompleted = [this]() {
+        // Find two options to offer: one from locked pool, one from confiscated
+        auto& gm = GameManager::Instance();
+        int option1 = -1, option2 = -1;
+
+        // First option: next locked weapon
+        for (int i = 0; i < 7; i++) {
+            bool unlocked = false;
+            for (int u : gm.unlockedWeaponSlots)
+                if (u == i) { unlocked = true; break; }
+            bool confiscated = false;
+            for (int c : gm.confiscatedSlots)
+                if (c == i) { confiscated = true; break; }
+            if (!unlocked && !confiscated) { option1 = i; break; }
+        }
+
+        // Second option: confiscated weapon if any, else next locked
+        if (!gm.confiscatedSlots.empty()) {
+            option2 = gm.confiscatedSlots[0];
+        }
+        else {
+            for (int i = 0; i < 7; i++) {
+                bool unlocked = false;
+                for (int u : gm.unlockedWeaponSlots)
+                    if (u == i) { unlocked = true; break; }
+                if (!unlocked && i != option1) { option2 = i; break; }
+            }
+        }
+
+        // Only show if there's something to unlock
+        if (option1 >= 0 || option2 >= 0) {
+            if (option1 < 0) option1 = option2;
+            if (option2 < 0) option2 = option1;
+            StateManager::Instance().PushState(
+                std::make_unique<WeaponUnlockState>(option1, option2));
+        }
+        };
 
     bulletPool_.DeactivateAll();
     enemyPool_.DeactivateAll(); // clear any leftover bullets from a previous run
@@ -51,9 +93,20 @@ void PlayingState::Enter() {
 }
 
 void PlayingState::Update(float dt) {
+    if (IsKeyPressed(KEY_F11))
+        ToggleFullscreen();
+
     if (pauseCooldown_ > 0.f) pauseCooldown_ -= dt;
     // ESC (pause state on top) 
     // PATTERN: State (push/pop means PlayingState is never destroyed on pause)
+    
+    static int lastUnlockedCount = 0;
+    int currentUnlocked = (int)GameManager::Instance().unlockedWeaponSlots.size();
+    if (currentUnlocked != lastUnlockedCount) {
+        lastUnlockedCount = currentUnlocked;
+        SyncWeaponsWithGameManager();
+    }
+
     if (IsKeyPressed(KEY_ESCAPE)) {
         pauseCooldown_ = 0.2f;
         StateManager::Instance().PushState(std::make_unique<PausedState>());
@@ -130,9 +183,27 @@ void PlayingState::Update(float dt) {
         return;
     }
 
+    CheckWeaponConfiscation();
+
     // Boss spawn at 180s
     if (!bossSpawned_ && elapsedTime_ >= 180.f) {
         bossSpawned_ = true;
+
+        // Free a slot if pool is full — boss always spawns
+        bool hasSlot = false;
+        for (const auto& e : enemyPool_.enemies)
+            if (!e.active) { hasSlot = true; break; }
+
+        if (!hasSlot) {
+            // Deactivate the first non boss enemy to make room
+            for (auto& e : enemyPool_.enemies) {
+                if (e.active && e.type != EnemyType::CEOBOSS) {
+                    e.active = false;
+                    break;
+                }
+            }
+        }
+        
         Enemy* boss = enemyFactory_.Spawn(EnemyType::CEOBOSS, { 400.f, 50.f }, false);
         if (boss) GameEvents::Instance().OnBossSpawned.Fire({ boss->position });
     }
@@ -530,5 +601,53 @@ void PlayingState::DrawBingoCard() const {
             DrawText(buf, x + 2, y + 5, 11,
                 marked[i] ? WHITE : LIGHTGRAY);
         }
+    }
+}
+
+void PlayingState::SyncWeaponsWithGameManager() {
+    auto& gm = GameManager::Instance();
+    weapons_.clear();
+
+    // Rebuild weapon list from unlocked slots in order
+    // Full weapon list order must match slot indices 0-6
+    for (int slot : gm.unlockedWeaponSlots) {
+        switch (slot) {
+        case 0: weapons_.push_back(std::make_unique<CaneLaser>()); break;
+        case 1: weapons_.push_back(std::make_unique<CandyRain>()); break;
+        case 2: weapons_.push_back(std::make_unique<FlyingDentures>()); break;
+        case 3: weapons_.push_back(std::make_unique<ExplosivePills>()); break;
+        case 4: weapons_.push_back(std::make_unique<PureeCatapult>()); break;
+        case 5: weapons_.push_back(std::make_unique<BingoSoundWave>()); break;
+        case 6: weapons_.push_back(std::make_unique<TurboCharge>()); break;
+        }
+    }
+
+    if (currentWeaponIdx_ >= (int)weapons_.size())
+        currentWeaponIdx_ = 0;
+}
+
+void PlayingState::CheckWeaponConfiscation() {
+    auto& gm = GameManager::Instance();
+
+    // Only confiscate if player has more than 1 weapon
+    if (weapons_.size() <= 1) return;
+
+    if (gm.CheckConfiscation()) {
+        // Get name of current weapon before confiscating
+        const char* taken = CurrentWeapon() ? CurrentWeapon()->GetName() : "Unknown";
+        int takenIdx = gm.unlockedWeaponSlots[currentWeaponIdx_];
+
+        // Remove from unlocked, add to confiscated
+        gm.unlockedWeaponSlots.erase(gm.unlockedWeaponSlots.begin() + currentWeaponIdx_);
+        gm.confiscatedSlots.push_back(takenIdx);
+
+        // Rebuild weapon list and clamp index
+        SyncWeaponsWithGameManager();
+
+        // Get name of new active weapon
+        const char* replacement = CurrentWeapon() ? CurrentWeapon()->GetName() : "None";
+
+        // Show confiscation card as overlay
+        StateManager::Instance().PushState(std::make_unique<ConfiscationState>(taken, replacement));
     }
 }

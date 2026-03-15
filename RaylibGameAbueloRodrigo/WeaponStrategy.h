@@ -5,6 +5,7 @@
 #include "Bullet.h"
 #include "raylib.h"
 #include <string>
+#include "GameManager.h"
 
 // Abstract base
 class WeaponStrategy {
@@ -55,7 +56,7 @@ class CaneLaser : public WeaponStrategy {
 
         const char* GetName() const override { return "Cane Laser"; }
         const char* GetDescription() const override { return "Fast energy beam"; }
-        float GetFireRate()  const override { return 1.0f; } //0.25 too fast
+        float GetFireRate() const override { return 1.0f; } //0.25 too fast
 };
 
 // Weapon 2: FlyingDentures
@@ -64,9 +65,9 @@ class FlyingDentures : public WeaponStrategy {
 public:
     void Fire(Vector2 playerPos, Vector2 moveDir, Vector2 mousePos,
         BulletPool& pool, float dmgMult, float frMult) override;
-    const char* GetName()        const override { return "Flying Dentures"; }
+    const char* GetName() const override { return "Flying Dentures"; }
     const char* GetDescription() const override { return "Bounces off walls x3"; }
-    float       GetFireRate()    const override { return 0.7f; }
+    float GetFireRate() const override { return 0.7f; }
 };
 
 // Weapon 3: ExplosivePills
@@ -75,9 +76,9 @@ class ExplosivePills : public WeaponStrategy {
 public:
     void Fire(Vector2 playerPos, Vector2 moveDir, Vector2 mousePos,
         BulletPool& pool, float dmgMult, float frMult) override;
-    const char* GetName()        const override { return "Explosive Pills"; }
+    const char* GetName() const override { return "Explosive Pills"; }
     const char* GetDescription() const override { return "Arc shot, explodes on impact"; }
-    float       GetFireRate()    const override { return 1.8f; }
+    float GetFireRate() const override { return 1.8f; }
 };
 
 // Weapon 4: PureeCatapult
@@ -86,9 +87,9 @@ class PureeCatapult : public WeaponStrategy {
 public:
     void Fire(Vector2 playerPos, Vector2 moveDir, Vector2 mousePos,
         BulletPool& pool, float dmgMult, float frMult) override;
-    const char* GetName()        const override { return "Puree Catapult"; }
+    const char* GetName() const override { return "Puree Catapult"; }
     const char* GetDescription() const override { return "6 blobs, slows 50%"; }
-    float       GetFireRate()    const override { return 0.9f; }
+    float GetFireRate() const override { return 0.9f; }
 };
 
 // Weapon 5: BingoSoundWave
@@ -97,9 +98,9 @@ class BingoSoundWave : public WeaponStrategy {
 public:
     void Fire(Vector2 playerPos, Vector2 moveDir, Vector2 mousePos,
         BulletPool& pool, float dmgMult, float frMult) override;
-    const char* GetName()        const override { return "Bingo Sound Wave"; }
+    const char* GetName() const override { return "Bingo Sound Wave"; }
     const char* GetDescription() const override { return "Expanding ring, hits all"; }
-    float       GetFireRate()    const override { return 1.2f; }
+    float GetFireRate() const override { return 1.2f; }
 };
 
 // Weapon 6: TurboCharge
@@ -119,7 +120,15 @@ class CandyRain : public WeaponStrategy {
 public:
     void Fire(Vector2 playerPos, Vector2 moveDir, Vector2 mousePos,
         BulletPool& pool, float dmgMult, float frMult) override;
-    const char* GetName()        const override { return "Candy Rain"; }
+    const char* GetName() const override { return "Candy Rain"; }
     const char* GetDescription() const override { return "12 candies in 360 degrees"; }
-    float       GetFireRate()    const override { return 0.6f; }
+    //float GetFireRate() const override { return 3.5f; }
+    float GetFireRate() const override {
+        switch (GameManager::Instance().difficulty) {
+        case Difficulty::EASY:   return 3.5f;
+        case Difficulty::MEDIUM: return 1.8f;
+        case Difficulty::HARD:   return 0.6f;
+        default:                 return 1.8f;
+        }
+    }
 };
